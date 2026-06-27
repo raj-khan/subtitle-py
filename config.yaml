@@ -1,0 +1,23 @@
+# auto-transcript config. Edit and restart to apply.
+
+# --- Appearance ---
+font_size: 32           # px
+font_color: "#FFFF00"   # caption text color (hex)
+font_family: "Sans"
+
+background: true        # semi-transparent box behind text (readability)
+background_color: "#000000"
+background_opacity: 0.55   # 0.0 = invisible, 1.0 = solid
+
+max_lines: 2            # rolling caption lines kept on screen
+linger_sec: 3.0         # keep last caption this long after speech stops, then fade
+
+# --- Window position (updated automatically when you drag the overlay) ---
+# null = center horizontally near the bottom on first launch.
+pos_x: null
+pos_y: null
+width: 900
+
+# --- Engine ---
+model: "base.en"        # tiny.en (faster) | base.en | small.en (more accurate)
+refresh_sec: 1.0        # how often committed words update mid-sentence
