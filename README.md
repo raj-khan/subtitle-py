@@ -82,7 +82,33 @@ Edit `config.yaml` and restart. The main settings:
 | `linger_sec`         | How long the last caption stays before it fades       |
 | `model`              | `tiny.en` (fastest), `base.en` (default), `small.en`  |
 
-Your dragged position is saved back into `config.yaml` automatically.
+Your dragged position is remembered automatically (in a local file, not in
+`config.yaml`, so the config stays clean).
+
+## Translating other languages to English
+
+Whisper can detect another spoken language and output English subtitles. Two
+settings turn this on:
+
+```yaml
+task: "translate"   # detect the language and write English
+model: "base"       # must be multilingual: tiny, base, or small (NOT *.en)
+language: "ms"      # the spoken language, e.g. ms for Malay, or "auto" to detect
+```
+
+For example, to subtitle a Bahasa Malay video in English, set `task: translate`,
+`model: base` (or `small` for better quality), and `language: ms`. Set
+`language: auto` if you do not know the language ahead of time.
+
+A few things worth knowing:
+
+- The default `*.en` models are English-only and cannot translate. You must use a
+  multilingual model (`tiny`, `base`, `small`). If you forget, it swaps to the
+  multilingual version automatically and prints a note.
+- Multilingual models are a little slower and slightly weaker on plain English, so
+  keep `task: transcribe` with `base.en` when you are watching English content.
+- Translation quality depends on the language and the model size. For harder
+  languages, `small` is noticeably better than `base` if your CPU can take it.
 
 ## How it works
 
