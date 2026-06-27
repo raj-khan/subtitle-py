@@ -1,0 +1,9 @@
+# auto-transcript v1 dependencies (Ubuntu / X11 / PulseAudio).
+# System: requires `parec` (pulseaudio-utils), already present on PulseAudio systems.
+faster-whisper      # transcription engine (CPU, int8)
+silero-vad          # voice activity detection (ONNX mode)
+onnxruntime         # runs the Silero VAD model
+torch               # pulled in by silero-vad; used for VAD frame inference
+numpy               # audio buffers
+PyQt5               # X11 caption overlay
+PyYAML              # config.yaml
