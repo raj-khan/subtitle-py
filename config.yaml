@@ -20,4 +20,6 @@ width: 900
 
 # --- Engine ---
 model: "base.en"        # tiny.en (faster) | base.en | small.en (more accurate)
-refresh_sec: 1.0        # how often committed words update mid-sentence
+refresh_sec: 0.6        # how often committed words update mid-sentence
+                        # lower = snappier captions, more CPU. 0.4-1.0 is sane.
+
