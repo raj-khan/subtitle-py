@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Captured audio / scratch
+*.wav
+
+# Local dev notes (not part of the public project)
+CLAUDE.md
