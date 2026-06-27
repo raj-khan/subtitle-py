@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -26,6 +26,8 @@ class Config:
     width: int = 900
     model: str = "base.en"
     refresh_sec: float = 1.0
+    task: str = "transcribe"   # "transcribe" | "translate" (any language -> English)
+    language: str = "en"       # source hint: "en", "ms", ... or "auto" to detect
 
     @classmethod
     def load(cls, path: Path = DEFAULT_PATH) -> "Config":
@@ -34,16 +36,3 @@ class Config:
         data = yaml.safe_load(path.read_text()) or {}
         known = {f for f in cls.__dataclass_fields__}
         return cls(**{k: v for k, v in data.items() if k in known})
-
-    def with_position(self, x: int, y: int) -> "Config":
-        return replace(self, pos_x=x, pos_y=y)
-
-    def save_position(self, x: int, y: int, path: Path = DEFAULT_PATH) -> None:
-        """Persist a dragged position back into config.yaml (best effort)."""
-        try:
-            data = yaml.safe_load(path.read_text()) or {} if path.exists() else {}
-            data["pos_x"] = int(x)
-            data["pos_y"] = int(y)
-            path.write_text(yaml.safe_dump(data, sort_keys=False))
-        except OSError:
-            pass

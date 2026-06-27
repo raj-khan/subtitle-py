@@ -32,16 +32,14 @@ def main() -> None:
     overlay = CaptionOverlay(cfg)
     overlay.show()
 
-    print(f"Captioning with {cfg.model}. Drag the caption to move it. "
+    mode = "translating to English" if cfg.task == "translate" else "captioning"
+    print(f"{mode.capitalize()} with {cfg.model} "
+          f"(language: {cfg.language}). Drag the caption to move it. "
           f"Ctrl-C here to quit.\n")
 
-    captioner = StreamingCaptioner(refresh_sec=cfg.refresh_sec)
-    # (model name from config is applied by building the transcriber explicitly)
-    if cfg.model != "base.en":
-        from autotranscript.engine import Transcriber
-        captioner = StreamingCaptioner(
-            transcriber=Transcriber(cfg.model), refresh_sec=cfg.refresh_sec
-        )
+    from autotranscript.engine import Transcriber
+    transcriber = Transcriber(cfg.model, task=cfg.task, language=cfg.language)
+    captioner = StreamingCaptioner(transcriber=transcriber, refresh_sec=cfg.refresh_sec)
 
     stop = threading.Event()
 

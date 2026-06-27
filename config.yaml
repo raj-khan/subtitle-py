@@ -12,14 +12,21 @@ background_opacity: 0.55   # 0.0 = invisible, 1.0 = solid
 max_lines: 2            # rolling caption lines kept on screen
 linger_sec: 3.0         # keep last caption this long after speech stops, then fade
 
-# --- Window position (updated automatically when you drag the overlay) ---
-# null = center horizontally near the bottom on first launch.
-pos_x: null
-pos_y: null
-width: 900
+width: 900             # overlay width in px
+# Drag the caption to move it; the position is remembered automatically.
 
 # --- Engine ---
 model: "base.en"        # tiny.en (faster) | base.en | small.en (more accurate)
+                        # for translation use a multilingual model: tiny | base | small
 refresh_sec: 0.6        # how often committed words update mid-sentence
                         # lower = snappier captions, more CPU. 0.4-1.0 is sane.
 
+# --- Language / translation ---
+# task: "transcribe" = caption the speech as spoken (English-only with a .en model).
+#       "translate"  = detect the spoken language and output ENGLISH subtitles.
+# To translate (e.g. Bahasa Malay), set task: translate AND a multilingual model
+# above (e.g. base or small). A .en model can't translate and is swapped with a note.
+task: "transcribe"
+# language: source-language hint. "en", "ms" (Malay), "es", "fr", ... or "auto"
+# to let Whisper detect it. For Malay: language: ms (faster, steadier) or auto.
+language: "en"
