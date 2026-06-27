@@ -12,11 +12,17 @@ thread.
 
 from __future__ import annotations
 
-from typing import List
+import json
+from pathlib import Path
+from typing import List, Optional, Tuple
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .config import Config
+
+# Dragged position lives here, not in config.yaml, so the config stays a clean
+# human-owned file. Gitignored (it's per-machine screen state).
+POS_FILE = Path(__file__).resolve().parent.parent / ".overlay_pos.json"
 
 
 class CaptionOverlay(QtWidgets.QWidget):
@@ -57,12 +63,30 @@ class CaptionOverlay(QtWidgets.QWidget):
 
     def _place(self) -> None:
         screen = QtWidgets.QApplication.primaryScreen().geometry()
-        if self.cfg.pos_x is not None and self.cfg.pos_y is not None:
-            self.move(self.cfg.pos_x, self.cfg.pos_y)
+        saved = self._load_pos()
+        if saved is not None:
+            self.move(*saved)
+        elif self.cfg.pos_x is not None and self.cfg.pos_y is not None:
+            self.move(self.cfg.pos_x, self.cfg.pos_y)  # optional manual override
         else:
             x = (screen.width() - self.width()) // 2
             y = int(screen.height() * 0.82) - self.height()
             self.move(x, y)
+
+    @staticmethod
+    def _load_pos() -> Optional[Tuple[int, int]]:
+        try:
+            d = json.loads(POS_FILE.read_text())
+            return int(d["x"]), int(d["y"])
+        except (OSError, ValueError, KeyError):
+            return None
+
+    @staticmethod
+    def _save_pos(x: int, y: int) -> None:
+        try:
+            POS_FILE.write_text(json.dumps({"x": int(x), "y": int(y)}))
+        except OSError:
+            pass
 
     # --- caption updates (GUI thread) ---
     def _on_committed(self, text: str) -> None:
@@ -152,4 +176,4 @@ class CaptionOverlay(QtWidgets.QWidget):
     def mouseReleaseEvent(self, _e) -> None:
         if self._drag_offset is not None:
             self._drag_offset = None
-            self.cfg.save_position(self.x(), self.y())
+            self._save_pos(self.x(), self.y())
