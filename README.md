@@ -48,8 +48,8 @@ python3 -m venv .venv
 If `python3 -m venv` complains that `ensurepip` is missing, install the venv
 package first: `sudo apt install python3-venv`.
 
-The first run downloads the Whisper model (about 480 MB for the default
-`small.en`, or 75 MB if you switch to `base.en`). After that it is fully offline.
+The first run downloads the Whisper model (about 75 MB for the default
+`tiny.en`). After that it is fully offline.
 
 ## Usage
 
@@ -80,8 +80,9 @@ Edit `config.yaml` and restart. The main settings:
 | `background`         | Show a dark box behind the text for readability       |
 | `background_opacity` | How solid that box is, 0.0 to 1.0                     |
 | `linger_sec`         | How long the last caption stays before it fades       |
-| `model`              | `tiny.en` (fastest), `base.en`, `small.en` (default)  |
-| `max_window_sec`     | Caps re-transcribed audio so long speech keeps up     |
+| `model`              | `tiny.en` (default, keeps up live), `base.en`, `small.en` |
+| `refresh_sec`        | How often it re-transcribes; the main lag knob        |
+| `max_lag_sec`        | If it falls this far behind, skip to live              |
 | `cpu_threads`        | Max cores Whisper uses; lower if it slows your PC     |
 
 Your dragged position is remembered automatically (in a local file, not in
@@ -130,8 +131,11 @@ the captions from flickering and rewriting themselves as you read.
 - English only for now.
 - Ubuntu / X11 / PulseAudio only. Audio capture and the overlay are kept in
   separate modules so other platforms can be added later.
-- Very long speech with no pauses can fall a little behind, because each refresh
-  re-transcribes the growing buffer.
+- Captions run a couple of seconds behind the audio. That is the cost of
+  transcribing locally on a CPU, not a bug.
+- Hard audio (live sports commentary over crowd noise, fast speech, names) is
+  near the limit of what a small local model can do. Expect the gist, not perfect
+  names. `base.en` reads a little cleaner if you can spare the extra lag.
 
 ## Development
 
