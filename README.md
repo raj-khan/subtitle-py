@@ -48,8 +48,8 @@ python3 -m venv .venv
 If `python3 -m venv` complains that `ensurepip` is missing, install the venv
 package first: `sudo apt install python3-venv`.
 
-The first run downloads the Whisper model (about 75 MB for `base.en`). After that
-it is fully offline.
+The first run downloads the Whisper model (about 480 MB for the default
+`small.en`, or 75 MB if you switch to `base.en`). After that it is fully offline.
 
 ## Usage
 
@@ -80,7 +80,9 @@ Edit `config.yaml` and restart. The main settings:
 | `background`         | Show a dark box behind the text for readability       |
 | `background_opacity` | How solid that box is, 0.0 to 1.0                     |
 | `linger_sec`         | How long the last caption stays before it fades       |
-| `model`              | `tiny.en` (fastest), `base.en` (default), `small.en`  |
+| `model`              | `tiny.en` (fastest), `base.en`, `small.en` (default)  |
+| `max_window_sec`     | Caps re-transcribed audio so long speech keeps up     |
+| `cpu_threads`        | Max cores Whisper uses; lower if it slows your PC     |
 
 Your dragged position is remembered automatically (in a local file, not in
 `config.yaml`, so the config stays clean).
