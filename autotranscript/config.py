@@ -24,10 +24,11 @@ class Config:
     pos_x: Optional[int] = None
     pos_y: Optional[int] = None
     width: int = 900
-    model: str = "small.en"
+    model: str = "tiny.en"
     refresh_sec: float = 1.0
     cpu_threads: int = 4       # cores Whisper may use; lower = gentler on the PC
-    max_window_sec: float = 5.0  # cap re-transcribed audio so captions keep up
+    max_window_sec: float = 10.0  # cap re-transcribed audio (context, not speed)
+    max_lag_sec: float = 2.5   # if captions fall this far behind, skip to live
     task: str = "transcribe"   # "transcribe" | "translate" (any language -> English)
     language: str = "en"       # source hint: "en", "ms", ... or "auto" to detect
 

@@ -56,7 +56,7 @@ def main() -> None:
             overlay.end_line.emit()
 
     def worker() -> None:
-        run_live(source.name, on_event, captioner=captioner)
+        run_live(source.name, on_event, captioner=captioner, max_lag_sec=cfg.max_lag_sec)
 
     t = threading.Thread(target=worker, daemon=True)
     t.start()

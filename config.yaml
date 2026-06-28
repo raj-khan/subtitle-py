@@ -16,23 +16,30 @@ width: 900             # overlay width in px
 # Drag the caption to move it; the position is remembered automatically.
 
 # --- Engine ---
-model: "small.en"       # tiny.en (faster) | base.en | small.en (more accurate)
-                        # small.en handles hard audio (sports commentary, crowd
-                        # noise, fast speech) better but uses ~3x the CPU. If it
-                        # lags or loads the PC, drop to base.en and you lose little.
+model: "tiny.en"        # tiny.en | base.en | small.en
+                        # KEEP-UP NOTE: each transcribe costs a near-fixed amount
+                        # (tiny ~0.5s, base ~1s, small ~4.5s), paid every refresh_sec.
+                        # For LIVE captions that don't fall behind, that cost must be
+                        # less than refresh_sec. tiny.en keeps up easily and is barely
+                        # worse than base.en on hard audio. base.en is a touch cleaner
+                        # but needs refresh_sec >= 1.5. small.en is too slow for live;
+                        # use it only for offline/clear speech.
                         # For translation use a multilingual model: tiny | base | small
-refresh_sec: 0.6        # how often committed words update mid-sentence
-                        # lower = snappier captions, more CPU. 0.4-1.0 is sane.
-cpu_threads: 4          # max CPU cores Whisper may use. The big knob for "this
-                        # slows my PC down": left unset Whisper grabs ALL cores.
-                        # 4 keeps captions live and the desktop responsive. Try 2
-                        # if it still bites; raise toward 6-8 only if captions lag.
-max_window_sec: 5.0     # the anti-lag knob for nonstop speech (live commentary).
-                        # We re-transcribe at most this many seconds each refresh,
-                        # so captions stop drifting further behind the longer it
-                        # runs. 5s keeps small.en real time (~2.5s lag). Lower = even
-                        # snappier with less context; raise toward 8-10 if you drop
-                        # back to base.en and want more context.
+refresh_sec: 1.0        # how often we re-transcribe and commit words. THE lag knob:
+                        # it must be larger than the model's per-call cost above or
+                        # captions drift behind forever. 1.0 suits tiny.en; raise to
+                        # 1.5-2.0 if you switch to base.en.
+cpu_threads: 4          # max CPU cores Whisper may use. The knob for "this slows my
+                        # PC down": left unset Whisper grabs ALL cores. 4 keeps the
+                        # desktop responsive. Try 2 if it still bites.
+max_window_sec: 10.0    # how much audio each refresh re-transcribes. Compute is
+                        # nearly flat with this (Whisper pads internally), so a bigger
+                        # window buys CONTEXT/accuracy almost for free. It is NOT the
+                        # lag knob (refresh_sec is). Keep under ~25.
+max_lag_sec: 2.5        # safety net: if transcription falls more than this far
+                        # behind real time, drop the stale audio and skip to the
+                        # present. Stops captions from snowballing minutes behind at
+                        # the cost of a few missed words. Lower = stricter/more current.
 
 # --- Language / translation ---
 # task: "transcribe" = caption the speech as spoken (English-only with a .en model).

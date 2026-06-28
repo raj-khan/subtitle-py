@@ -18,7 +18,10 @@ appends committed text and starts a new line on end_of_utterance.
 
 from __future__ import annotations
 
+import collections
 import re
+import threading
+import time
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
@@ -159,6 +162,16 @@ class StreamingCaptioner:
         self._skip_until = 0.0
         self._commit_time = 0.0
 
+    def reset_live(self) -> None:
+        """Drop all in-progress state after stale audio was skipped.
+
+        When the live loop falls behind and jumps to the present, the audio it
+        feeds next is not continuous with what came before, so the VAD and the
+        current utterance must start fresh (we keep the loaded Silero model).
+        """
+        self.vad = StreamingVAD(vad=self.vad.vad)
+        self._reset_utterance()
+
     def flush(self) -> List[CaptionEvent]:
         """On shutdown, emit any in-progress utterance."""
         tail = self.vad.flush()
@@ -175,21 +188,68 @@ def run_live(
     on_event: Callable[[CaptionEvent], None],
     captioner: Optional[StreamingCaptioner] = None,
     chunk_sec: float = 0.1,
+    max_lag_sec: float = 2.5,
 ) -> None:
     """Blocking live loop: stream a PulseAudio source through the captioner.
 
-    Ctrl-C to stop. `on_event` receives each CaptionEvent as it's produced.
+    Capture happens in its own thread so it always runs in real time. The main
+    loop drains whatever audio has arrived and transcribes it. If transcription
+    can't keep up and the backlog grows past `max_lag_sec`, we DROP the stale
+    audio and skip to the present: a live caption that's current and missing a
+    few words beats one that drifts minutes behind. `on_event` gets each event.
     """
-    from .capture import stream_pcm
+    from .capture import BYTES_PER_SECOND, stream_pcm
     from .engine import pcm16_to_float32
 
     cap = captioner or StreamingCaptioner()
+    max_lag_bytes = int(BYTES_PER_SECOND * max_lag_sec)
+
+    buf: "collections.deque[bytes]" = collections.deque()
+    lock = threading.Lock()
+    pending = {"bytes": 0}
+    running = threading.Event()
+    running.set()
+
+    def reader() -> None:
+        try:
+            for pcm in stream_pcm(source_name, chunk_seconds=chunk_sec):
+                if not running.is_set():
+                    break
+                with lock:
+                    buf.append(pcm)
+                    pending["bytes"] += len(pcm)
+        finally:
+            running.clear()
+
+    th = threading.Thread(target=reader, daemon=True)
+    th.start()
+
     try:
-        for pcm in stream_pcm(source_name, chunk_seconds=chunk_sec):
-            for ev in cap.feed(pcm16_to_float32(pcm)):
+        while running.is_set() or pending["bytes"] > 0:
+            with lock:
+                # Skip to live: if we're too far behind, drop the oldest audio
+                # and keep only the most recent max_lag_sec.
+                skipped = False
+                while pending["bytes"] > max_lag_bytes and len(buf) > 1:
+                    old = buf.popleft()
+                    pending["bytes"] -= len(old)
+                    skipped = True
+                chunks = list(buf)
+                buf.clear()
+                pending["bytes"] = 0
+
+            if skipped:
+                cap.reset_live()
+            if not chunks:
+                time.sleep(chunk_sec)
+                continue
+
+            audio = pcm16_to_float32(b"".join(chunks))
+            for ev in cap.feed(audio):
                 on_event(ev)
     except KeyboardInterrupt:
         pass
     finally:
+        running.clear()
         for ev in cap.flush():
             on_event(ev)
