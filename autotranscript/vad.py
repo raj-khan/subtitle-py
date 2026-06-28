@@ -90,6 +90,20 @@ class StreamingVAD:
             return np.concatenate(self._speech)
         return np.zeros(0, dtype=np.float32)
 
+    def trim_active(self, keep_samples: int) -> None:
+        """Drop all but the last `keep_samples` of the in-progress utterance.
+
+        The streaming captioner calls this during long pauseless speech (e.g. live
+        commentary) so the buffer it re-transcribes every refresh stays bounded.
+        Without it the window grows forever and captions fall steadily behind.
+        """
+        if not self._triggered or not self._speech:
+            return
+        audio = np.concatenate(self._speech)
+        if 0 < keep_samples < len(audio):
+            audio = audio[-keep_samples:]
+        self._speech = [audio]
+
     def _prob(self, frame: np.ndarray) -> float:
         t = torch.from_numpy(frame)
         return float(self.vad(t, SAMPLE_RATE))

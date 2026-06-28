@@ -41,7 +41,11 @@ def main() -> None:
     transcriber = Transcriber(
         cfg.model, task=cfg.task, language=cfg.language, cpu_threads=cfg.cpu_threads
     )
-    captioner = StreamingCaptioner(transcriber=transcriber, refresh_sec=cfg.refresh_sec)
+    captioner = StreamingCaptioner(
+        transcriber=transcriber,
+        refresh_sec=cfg.refresh_sec,
+        max_window_sec=cfg.max_window_sec,
+    )
 
     stop = threading.Event()
 

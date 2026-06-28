@@ -56,15 +56,25 @@ class StreamingCaptioner:
         transcriber: Optional[Transcriber] = None,
         vad=None,
         refresh_sec: float = 1.0,
+        max_window_sec: float = 8.0,
+        context_sec: float = 1.0,
     ):
         self.tx = transcriber or Transcriber("base.en")
         self.vad = StreamingVAD(vad=vad or load_vad())
         self.refresh_sec = refresh_sec
+        # Cap how much audio we re-transcribe each refresh. Speech with no pauses
+        # (live commentary) would otherwise grow the buffer forever and lag harder
+        # the longer it runs. When the window passes max_window_sec we keep only a
+        # short context tail of already-committed audio and roll on.
+        self.max_window_sec = max_window_sec
+        self.context_sec = context_sec
 
         # LocalAgreement state for the current utterance.
         self._prev_words: List[str] = []   # previous hypothesis (full word list)
         self._committed_n = 0              # how many words already emitted
         self._last_refresh_len = 0         # samples at last transcribe
+        self._skip_until = 0.0             # ignore words ending before this (s)
+        self._commit_time = 0.0            # end time of last committed word (s)
 
     def feed(self, audio: np.ndarray) -> List[CaptionEvent]:
         """Push float32 16 kHz audio. Return any caption events produced."""
@@ -79,6 +89,9 @@ class StreamingCaptioner:
                 ev = self._refresh(active, end=False)
                 if ev:
                     events.append(ev)
+            # Safety valve for pauseless speech: keep the window bounded.
+            if len(self.vad.active_audio) >= self.max_window_sec * SAMPLE_RATE:
+                self._rollover()
 
         # 2) Finished utterances: commit the remainder, end the line.
         for utt in completed:
@@ -89,7 +102,12 @@ class StreamingCaptioner:
         return events
 
     def _refresh(self, audio: np.ndarray, end: bool) -> Optional[CaptionEvent]:
-        words = [w.text for w in self.tx.transcribe(audio)]
+        hyp = self.tx.transcribe(audio)
+        # After a rollover the window starts with already-committed audio; skip the
+        # words that fall inside it so we never emit them twice.
+        if self._skip_until > 0.0:
+            hyp = [w for w in hyp if w.end > self._skip_until]
+        words = [w.text for w in hyp]
 
         if end:
             # Commit everything past what we've already emitted.
@@ -102,13 +120,44 @@ class StreamingCaptioner:
         if agreed > self._committed_n:
             newly = words[self._committed_n:agreed]
             self._committed_n = agreed
+            self._commit_time = hyp[agreed - 1].end  # window-relative seconds
             return CaptionEvent("".join(newly), end_of_utterance=False)
         return None
+
+    def _rollover(self) -> None:
+        """Bound the re-transcribed window during long pauseless speech.
+
+        Keep the uncommitted tail plus `context_sec` of already-committed audio for
+        acoustic continuity, drop the rest, and mark the kept committed part so its
+        words aren't emitted again. If nothing has committed yet there's no safe
+        anchor, so let the window grow a little longer (a hard cap still applies).
+        """
+        active_len = len(self.vad.active_audio)
+        trim_at = max(0.0, self._commit_time - self.context_sec)
+        keep = active_len - int(trim_at * SAMPLE_RATE)
+
+        if keep <= 0 or keep >= active_len:
+            if active_len < int(1.5 * self.max_window_sec * SAMPLE_RATE):
+                return  # nothing committed yet; give it more time to settle
+            # Pathological: way over budget with no commit. Hard reset the tail.
+            self.vad.trim_active(int(self.context_sec * SAMPLE_RATE))
+            self._skip_until = 0.0
+            self._commit_time = 0.0
+        else:
+            self.vad.trim_active(keep)
+            self._skip_until = self._commit_time - trim_at
+            self._commit_time = self._skip_until
+
+        self._prev_words = []
+        self._committed_n = 0
+        self._last_refresh_len = len(self.vad.active_audio)
 
     def _reset_utterance(self) -> None:
         self._prev_words = []
         self._committed_n = 0
         self._last_refresh_len = 0
+        self._skip_until = 0.0
+        self._commit_time = 0.0
 
     def flush(self) -> List[CaptionEvent]:
         """On shutdown, emit any in-progress utterance."""
