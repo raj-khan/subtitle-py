@@ -38,7 +38,9 @@ def main() -> None:
           f"Ctrl-C here to quit.\n")
 
     from autotranscript.engine import Transcriber
-    transcriber = Transcriber(cfg.model, task=cfg.task, language=cfg.language)
+    transcriber = Transcriber(
+        cfg.model, task=cfg.task, language=cfg.language, cpu_threads=cfg.cpu_threads
+    )
     captioner = StreamingCaptioner(transcriber=transcriber, refresh_sec=cfg.refresh_sec)
 
     stop = threading.Event()

@@ -50,14 +50,24 @@ class Transcriber:
         compute_type: str = "int8",
         task: str = "transcribe",
         language: str = "en",
+        cpu_threads: int = 4,
     ):
         # task: "transcribe" (caption as spoken) or "translate" (output English).
         # language: a code like "en"/"ms", or "auto"/None to let Whisper detect.
+        # cpu_threads: cap the cores Whisper uses. Left at 0, CTranslate2 grabs ALL
+        # cores during each transcription burst and the whole desktop stutters.
+        # base.en runs ~0.15x real time, so a few threads keep captions live while
+        # leaving the rest of the machine free.
         self.task = task
         self.language = None if language in (None, "auto") else language
         model_name = resolve_model(model_name, task)
         # download_root defaults to ~/.cache/huggingface; fully local after first run.
-        self.model = WhisperModel(model_name, device="cpu", compute_type=compute_type)
+        self.model = WhisperModel(
+            model_name,
+            device="cpu",
+            compute_type=compute_type,
+            cpu_threads=cpu_threads,
+        )
         self.model_name = model_name
 
     def transcribe(self, audio: np.ndarray) -> List[Word]:

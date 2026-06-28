@@ -20,6 +20,10 @@ model: "base.en"        # tiny.en (faster) | base.en | small.en (more accurate)
                         # for translation use a multilingual model: tiny | base | small
 refresh_sec: 0.6        # how often committed words update mid-sentence
                         # lower = snappier captions, more CPU. 0.4-1.0 is sane.
+cpu_threads: 4          # max CPU cores Whisper may use. The big knob for "this
+                        # slows my PC down": left unset Whisper grabs ALL cores.
+                        # 4 keeps captions live and the desktop responsive. Try 2
+                        # if it still bites; raise toward 6-8 only if captions lag.
 
 # --- Language / translation ---
 # task: "transcribe" = caption the speech as spoken (English-only with a .en model).

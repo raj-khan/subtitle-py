@@ -26,6 +26,7 @@ class Config:
     width: int = 900
     model: str = "base.en"
     refresh_sec: float = 1.0
+    cpu_threads: int = 4       # cores Whisper may use; lower = gentler on the PC
     task: str = "transcribe"   # "transcribe" | "translate" (any language -> English)
     language: str = "en"       # source hint: "en", "ms", ... or "auto" to detect
 
